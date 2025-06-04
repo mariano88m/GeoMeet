@@ -1,0 +1,61 @@
+SELECT DISTINCT ON (c.inicio, c2.inicio)
+a1.numero AS numero1,
+a1.titularidad AS titularidad1,
+c.inicio AS inicio1,
+ce1.direccion AS direccion1,
+ce1.latitud as latitud1,
+ce1.longitud as longitud1,
+l.archivo AS archivo_lote1,
+
+a2.numero AS numero2,
+a2.titularidad AS titularidad2,
+c2.inicio AS inicio2,
+ce2.direccion AS direccion2,
+ce2.latitud as latitud2,
+ce2.longitud as longitud2,
+l2.archivo AS archivo_lote2,
+
+TO_CHAR(c2.inicio - c.inicio, 'MI:SS') AS diferencia_tiempo,
+
+TO_CHAR(
+calcular_distancia_haversine(
+ce1.latitud::double precision,
+ce1.longitud::double precision,
+ce2.latitud::double precision,
+ce2.longitud::double precision
+),
+'FM999990.00'
+) || ' km' AS distancia_kms
+
+FROM cruces_aplicacion_comunicacion c
+JOIN cruces_aplicacion_celda ce1 ON c.celda_a_id = ce1.id
+JOIN cruces_aplicacion_comunicacion c2
+ON c2.id <> c.id
+AND c2.inicio > c.inicio
+AND c.interlocutor_a_id <> c2.interlocutor_a_id
+JOIN cruces_aplicacion_celda ce2 ON c2.celda_a_id = ce2.id
+
+JOIN cruces_aplicacion_lote l ON c.lote_id = l.id
+JOIN cruces_aplicacion_lote l2 ON c2.lote_id = l2.id
+
+JOIN cruces_aplicacion_abonado a1 ON c.interlocutor_a_id = a1.id
+JOIN cruces_aplicacion_abonado a2 ON c2.interlocutor_a_id = a2.id
+
+WHERE ce1.cruce_id = 5
+AND ce2.cruce_id = 5
+AND EXTRACT(EPOCH FROM (c2.inicio - c.inicio)) / 60 < 5
+AND calcular_distancia_haversine(
+ce1.latitud::double precision,
+ce1.longitud::double precision,
+ce2.latitud::double precision,
+ce2.longitud::double precision
+) < 2
+AND a1.numero < a2.numero
+
+ORDER BY c.inicio, c2.inicio,
+calcular_distancia_haversine(
+ce1.latitud::double precision,
+ce1.longitud::double precision,
+ce2.latitud::double precision,
+ce2.longitud::double precision
+) ASC;
